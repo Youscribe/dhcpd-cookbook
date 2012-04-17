@@ -5,9 +5,12 @@
 # Copyright 2011, Joshua SS Miller
 #
 
-service "dhcp3-server"
+service "dhcpd" do
+  service_name node[:dhcpd][:service]
+end
 
-package "dhcp3-server" do 
+package "dhcpd" do
+  package_name node[:dhcpd][:package] 
   if node[:dhcpd][:version]
     version node[:dhcpd][:version]
     action :install
@@ -16,19 +19,21 @@ package "dhcp3-server" do
   end
 end
 
-
-template "/etc/default/dhcp3-server" do
+template node[:dhcpd][:default_file] do
   source "dhcp3-server.erb"
   owner "root"
   group "root"
   mode 0644
-  notifies(:restart, resources(:service => "dhcp3-server"))
+  notifies(:restart, resources(:service => "dhcpd"))
 end
 
-template "/etc/dhcp3/dhcpd.conf" do
+template node[:dhcpd][:dhcpd_conf_file] do
   source "dhcpd.conf.erb"
   owner "root"
   group "root"
   mode 0644
-  notifies(:restart, resources(:service => "dhcp3-server"))
+  variables(
+    :secret => search(:zones, "domain:#{node[:dhcpd][:domain]} AND ddns:true" ).first["secret"]
+    )
+  notifies(:restart, resources(:service => "dhcpd"))
 end
